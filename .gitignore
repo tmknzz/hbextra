@@ -190,4 +190,5 @@ cython_debug/
 
 # Claude Code (フォーメーション skill 作業ディレクトリ)
 .claude/
+.codex/
 tasks/
