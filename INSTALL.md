@@ -2,7 +2,7 @@
 
 ## 必要なもの
 - Mac（macOS 12以降推奨）
-- Python 3（macOS には標準でインストール済み）
+- Python 3.9以上
 - GitHub Desktop（https://desktop.github.com）
 
 ---
@@ -32,10 +32,10 @@ GitHub Desktop を開いて：
 ターミナルを開いて以下を実行：
 
 ```bash
-pip3 install flask pykakasi
+python3 -m pip install -r requirements.txt
 ```
 
-> `pip3` が見つからない場合は `pip install flask pykakasi` を試す
+> `pip3` が見つからない場合は `python3 -m pip install -r requirements.txt` を試す
 
 ---
 
@@ -70,17 +70,24 @@ GitHub Desktop を開いて「**Fetch origin**」→「**Pull origin**」を押�
 
 ### 「flask が見つからない」エラーが出る
 ```bash
-pip3 install flask pykakasi
+python3 -m pip install -r requirements.txt
 ```
 を再実行する。それでも出る場合：
 ```bash
-python3 -m pip install flask pykakasi
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
 ```
 
 ### ポート8000が使用中と出る
 `hbextra.py` の末尾近くにある以下の行を探して、`8000` を別の番号（例：`8001`）に変更する：
 ```python
-app.run(host='0.0.0.0', port=8000, ...)
+app.run(host=host, port=8000, ...)
+```
+
+### LAN内の他端末からアクセスしたい
+通常は自分のMacからだけ使えるように起動します。LAN公開する場合だけ、以下のように明示して起動します：
+```bash
+HBEXTRA_HOST=0.0.0.0 python3 hbextra.py
 ```
 
 ---

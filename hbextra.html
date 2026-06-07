@@ -585,10 +585,14 @@ function entryParams() {
 
 // ─── Render helpers ───────────────────────────────────────────
 function h(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function eid(url) {
   return 'tag_' + Math.abs(url.split('').reduce((a,c) => (a<<5)-a+c.charCodeAt(0),0)).toString(36);
+}
+function safeCount(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
 }
 function tagChips(tags, limit = 10) {
   return tags.slice(0, limit).map(({tag}) =>
@@ -614,12 +618,12 @@ function renderEntry(e, idx) {
   return `<div class="entry-card" data-url="${h(e.url)}" data-idx="${idx}" onclick="cardClick(event,${idx})">
   <div class="entry-meta">
     ${fmtDate(e.date) ? `<span class="entry-date">${fmtDate(e.date)}</span>` : ''}
-    <span class="bcount">${e.count} users</span>
+    <span class="bcount">${safeCount(e.count)} users</span>
     <span class="entry-actions">
-      <button class="star-btn${e.starred?' on':''}" onclick="toggleStar('${h(e.url)}')" title="スター (s)">${e.starred ? '★' : '☆'}</button>
+      <button class="star-btn${e.starred?' on':''}" data-action="star" title="スター (s)">${e.starred ? '★' : '☆'}</button>
       ${st.dismissedOnly
-        ? `<button class="restore-btn" onclick="undismissEntry('${h(e.url)}')" title="復元 (d)">↩</button>`
-        : `<button class="dismiss-btn" onclick="dismissEntry('${h(e.url)}')" title="非表示 (d)">✕</button>`}
+        ? `<button class="restore-btn" data-action="restore" title="復元 (d)">↩</button>`
+        : `<button class="dismiss-btn" data-action="dismiss" title="非表示 (d)">✕</button>`}
     </span>
   </div>
   <div class="entry-title"><a href="${h(e.url)}" target="_blank" rel="noopener noreferrer">${h(e.title)}</a></div>
@@ -657,7 +661,7 @@ function renderPagination(total) {
 
 function _tagChipsFull(tags) {
   return tags.map(({tag, count}) =>
-    `<span class="tag-chip${st.tag===tag?' active':''}" data-tag="${h(tag)}" onclick="toggleTag(this.dataset.tag)">${h(tag)}<span class="tag-cnt"> ${count}</span></span>`
+    `<span class="tag-chip${st.tag===tag?' active':''}" data-tag="${h(tag)}" onclick="toggleTag(this.dataset.tag)">${h(tag)}<span class="tag-cnt"> ${safeCount(count)}</span></span>`
   ).join('');
 }
 let allTagSort   = localStorage.getItem('allTagSort')   || 'count';
@@ -761,7 +765,7 @@ function renderTagCloud() {
   // 上部：現在ページの記事からタグを集計
   const cnt = {};
   for (const e of allEntries) {
-    for (const {tag, count} of e.tags) cnt[tag] = (cnt[tag] ?? 0) + count;
+    for (const {tag, count} of e.tags) cnt[tag] = (cnt[tag] ?? 0) + safeCount(count);
   }
   const pageTags = Object.entries(cnt).filter(([,c])=>c>1).sort((a,b)=>b[1]-a[1]).map(([tag,count]) => ({tag, count}));
   const wrap = document.getElementById('tag-cloud-wrap');
@@ -917,6 +921,19 @@ async function toggleStar(url) {
   // リストからの除外は次の更新・ページ遷移時に自然に行われる
   await apiPost('/api/star', { url, starred: e.starred }).catch(() => {});
 }
+
+document.getElementById('entries').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const card = btn.closest('.entry-card');
+  const url = card?.dataset?.url;
+  if (!url) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (btn.dataset.action === 'star') toggleStar(url);
+  else if (btn.dataset.action === 'restore') undismissEntry(url);
+  else if (btn.dataset.action === 'dismiss') dismissEntry(url);
+});
 
 async function doRefresh() {
   setStatus('更新中…');

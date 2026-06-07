@@ -4,7 +4,7 @@
 
 ## 必要なもの
 
-- Python 3.8以上
+- Python 3.9以上
 - インターネット接続（RSSフィード取得用）
 
 ## インストール
@@ -17,7 +17,7 @@ git clone https://github.com/tamekuniz/hbextra.git
 cd hbextra
 
 # 依存パッケージをインストール
-pip3 install flask pykakasi
+python3 -m pip install -r requirements.txt
 ```
 
 ### Windows
@@ -31,10 +31,10 @@ git clone https://github.com/tamekuniz/hbextra.git
 cd hbextra
 
 # 依存パッケージをインストール
-pip install flask pykakasi
+python -m pip install -r requirements.txt
 ```
 
-> `pip` が見つからない場合は `python -m pip install flask pykakasi` を試してください。
+> `pip` が見つからない場合は `python -m pip install -r requirements.txt` を試してください。
 
 ## 起動
 
@@ -52,14 +52,22 @@ python hbextra.py
 
 ブラウザで http://localhost:8000 を開く。初回アクセス時にユーザー登録画面が表示されます。
 
-LAN内の他端末からもアクセスできます（`http://<IPアドレス>:8000`）。
+標準ではこのMac/PCからだけアクセスできます。LAN内の他端末から使う場合は `HBEXTRA_HOST=0.0.0.0 python3 hbextra.py` のように明示して起動してください。
+
+## 公開運用
+
+- 初回ユーザー作成後、追加ユーザー登録には `HBEXTRA_REGISTRATION_TOKEN` が必要です。
+- HTTPS 配下で公開する場合は `HBEXTRA_COOKIE_SECURE=1` と `HBEXTRA_HSTS=1` を設定してください。
+- 本番起動は `gunicorn --workers 1 --bind 127.0.0.1:8001 wsgi:application` を推奨します。
 
 ## 依存パッケージ
 
 | パッケージ | 必須 | 用途 |
 |-----------|------|------|
-| flask | Yes | Webサーバー |
+| Flask | Yes | Webサーバー |
 | pykakasi | No | 日本語ひらがな変換（検索精度向上） |
+| defusedxml | Yes | RSS XMLの安全な解析 |
+| gunicorn | Production | 本番WSGIサーバー |
 
 ## 機能
 
