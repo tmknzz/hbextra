@@ -529,7 +529,7 @@
       <span id="preview-hint">Space: スクロール　V / Esc: 閉じる</span>
       <button id="preview-close" onclick="closePreview()" title="閉じる（V / Esc）">✕</button>
     </div>
-    <iframe id="preview-iframe" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+    <iframe id="preview-iframe" tabindex="0" sandbox="allow-scripts allow-forms allow-popups"></iframe>
   </div>
 </div>
 
@@ -994,10 +994,13 @@ function openPreview(url) {
   const urlBar = document.getElementById('preview-bar-url');
   const iframe = document.getElementById('preview-iframe');
   urlBar.innerHTML = `<a href="${h(url)}" target="_blank" rel="noreferrer">${h(url)}</a>`;
+  iframe.addEventListener('load', () => {
+    if (modal.classList.contains('open')) iframe.focus();
+  }, { once: true });
   iframe.src = `${BASE_PATH}/api/proxy?url=${encodeURIComponent(url)}`;
   _previewUrl = url;
   modal.classList.add('open');
-  // iframe 内フォーカス時のキー操作は親フレームの keydown ハンドラ (Esc/Space/j/k 等) で受ける仕様。
+  // iframe へフォーカスを移し、Space は iframe 内でスクロールさせる。
   // sandbox から allow-same-origin を外しているため iframe.contentDocument には触れない。
 }
 
@@ -1012,6 +1015,36 @@ function closePreview() {
 // モーダル背景クリックで閉じる
 document.getElementById('preview-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('preview-modal')) closePreview();
+});
+
+function scrollPreview(shiftKey) {
+  const iframe = document.getElementById('preview-iframe');
+  iframe.focus();
+  iframe.contentWindow?.postMessage({
+    type: 'hbextra-preview-scroll',
+    direction: shiftKey ? -1 : 1,
+  }, '*');
+}
+
+function movePreview(delta) {
+  const newIdx = delta > 0
+    ? (focusIdx < 0 ? 0 : focusIdx + 1)
+    : Math.max(0, focusIdx - 1);
+  setFocus(newIdx);
+  const url = getFocusedUrl();
+  if (url) openPreview(url);
+}
+
+window.addEventListener('message', e => {
+  const iframe = document.getElementById('preview-iframe');
+  const modal = document.getElementById('preview-modal');
+  if (!modal.classList.contains('open') || e.source !== iframe.contentWindow) return;
+  const data = e.data || {};
+  if (data.type !== 'hbextra-preview-key') return;
+  const key = data.key === 'Escape' ? 'Escape' : String(data.key || '').toLowerCase();
+  if (key === 'Escape' || key === 'v') { closePreview(); return; }
+  if (key === 'j') { movePreview(1); return; }
+  if (key === 'k') { movePreview(-1); }
 });
 
 document.addEventListener('keydown', e => {
@@ -1035,13 +1068,7 @@ document.addEventListener('keydown', e => {
     const modal = document.getElementById('preview-modal');
     if (modal.classList.contains('open')) {
       e.preventDefault();
-      try {
-        const iframeWin = document.getElementById('preview-iframe').contentWindow;
-        const dir = e.shiftKey ? -1 : 1;
-        iframeWin.scrollBy({ top: iframeWin.innerHeight * 0.9 * dir, behavior: 'smooth' });
-      } catch(_) {
-        // cross-origin sandbox では innerHeight/scrollBy 不可。スクロールは諦めるが modal 表示は維持
-      }
+      scrollPreview(e.shiftKey);
       return;
     }
   }
@@ -1050,12 +1077,7 @@ document.addEventListener('keydown', e => {
     const modal = document.getElementById('preview-modal');
     if (modal.classList.contains('open')) {
       e.preventDefault();
-      const newIdx = e.key === 'j'
-        ? (focusIdx < 0 ? 0 : focusIdx + 1)
-        : Math.max(0, focusIdx - 1);
-      setFocus(newIdx);
-      const url = getFocusedUrl();
-      if (url) openPreview(url);
+      movePreview(e.key === 'j' ? 1 : -1);
       return;
     }
   }

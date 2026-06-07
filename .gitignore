@@ -1,5 +1,7 @@
 # hbextra database (ローカルデータのため除外)
 *.db
+*.db-shm
+*.db-wal
 
 # セッション秘密鍵
 .secret_key

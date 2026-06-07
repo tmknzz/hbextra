@@ -244,7 +244,7 @@ def _parse_int_arg(name, default, *, min_value=None, max_value=None):
 _LEGACY_HASH_RE = re.compile(r'[0-9a-f]{32}:[0-9a-f]{64}')
 
 def hash_password(pw):
-    return generate_password_hash(pw)
+    return generate_password_hash(pw, method='pbkdf2:sha256')
 
 def _is_legacy_hash(stored):
     """ffdf6c1 以前の 'salt_hex:sha256_hex' 形式を判定。新形式は werkzeug の prefix で始まる。"""
@@ -849,6 +849,41 @@ def api_proxy():
         # <base> タグで相対URLを元サイト基準に解決
         base_tag = f'<base href="{url}" target="_blank">'
         text = re.sub(r'(<head[^>]*>)', r'\1' + base_tag, text, count=1, flags=re.I)
+        bridge_script = '''<script>
+(function() {
+  window.addEventListener('message', function(event) {
+    var data = event.data || {};
+    if (data.type !== 'hbextra-preview-scroll') return;
+    var direction = data.direction === -1 ? -1 : 1;
+    window.scrollBy({ top: window.innerHeight * 0.9 * direction, behavior: 'smooth' });
+  });
+  window.addEventListener('keydown', function(event) {
+    var key = event.key === 'Escape' ? 'Escape' : String(event.key || '').toLowerCase();
+    var target = event.target;
+    var isTyping = target && target.closest &&
+      target.closest('input, textarea, select, button, [contenteditable]');
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      if (!isTyping) {
+        event.preventDefault();
+        event.stopPropagation();
+        var direction = event.shiftKey ? -1 : 1;
+        window.scrollBy({ top: window.innerHeight * 0.9 * direction, behavior: 'smooth' });
+      }
+      return;
+    }
+    if (!['Escape', 'v', 'j', 'k'].includes(key)) return;
+    if (!isTyping) {
+      event.preventDefault();
+      event.stopPropagation();
+      parent.postMessage({ type: 'hbextra-preview-key', key: key }, '*');
+    }
+  }, true);
+})();
+</script>'''
+        if re.search(r'</body\s*>', text, re.I):
+            text = re.sub(r'</body\s*>', bridge_script + r'\g<0>', text, count=1, flags=re.I)
+        else:
+            text += bridge_script
         body = text.encode('utf-8')
         ct = 'text/html; charset=utf-8'
 

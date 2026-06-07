@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tmknzz.hbextra.gunicorn</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/jonji/GitHub/tmknzz/HBExtra/.venv/bin/gunicorn</string>
+    <string>--workers</string>
+    <string>1</string>
+    <string>--bind</string>
+    <string>127.0.0.1:8001</string>
+    <string>wsgi:application</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/jonji/GitHub/tmknzz/HBExtra</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/jonji/GitHub/tmknzz/HBExtra/logs/gunicorn.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/jonji/GitHub/tmknzz/HBExtra/logs/gunicorn.err.log</string>
+</dict>
+</plist>
