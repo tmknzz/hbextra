@@ -164,6 +164,37 @@ class HBExtraSecurityTest(unittest.TestCase):
         self.assertIn('sandbox', res.headers.get('Content-Security-Policy', ''))
         self.assertIn('X-Content-Type-Options', res.headers)
 
+    def test_proxy_decodes_declared_japanese_charset(self):
+        class FakeResponse:
+            headers = {'Content-Type': 'text/html; charset=Shift_JIS'}
+
+            def __init__(self):
+                self.body = '<html><body>日本語の記事</body></html>'.encode('shift_jis')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, size=-1):
+                if not self.body:
+                    return b''
+                if size is None or size < 0:
+                    size = len(self.body)
+                chunk, self.body = self.body[:size], self.body[size:]
+                return chunk
+
+        class FakeOpener:
+            def open(self, req, timeout=0):
+                return FakeResponse()
+
+        self.register('alice')
+        self.hbextra._no_redirect_opener = FakeOpener()
+        res = self.client.get('/hbextra/api/proxy?url=https://example.com/')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('日本語の記事', res.data.decode('utf-8'))
+
     def test_normal_responses_have_security_headers(self):
         self.register('alice')
         res = self.client.get('/hbextra/api/me')

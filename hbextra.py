@@ -306,6 +306,43 @@ def _read_limited(resp, max_bytes):
             raise ValueError('response too large')
     return b''.join(chunks)
 
+def _charset_from_content_type(content_type):
+    match = re.search(r'charset=["\']?([^;"\'\s]+)', content_type or '', re.I)
+    return match.group(1).strip() if match else ''
+
+def _charset_from_html(body):
+    head = body[:4096].decode('ascii', errors='ignore')
+    match = re.search(r'<meta[^>]+charset=["\']?\s*([^"\'\s/>;]+)', head, re.I)
+    if match:
+        return match.group(1).strip()
+    match = re.search(
+        r'<meta[^>]+http-equiv=["\']?content-type["\']?[^>]+content=["\'][^"\']*charset=([^"\'\s;]+)',
+        head,
+        re.I,
+    )
+    return match.group(1).strip() if match else ''
+
+def _decode_response_body(body, content_type):
+    candidates = [
+        _charset_from_content_type(content_type),
+        _charset_from_html(body),
+        'utf-8',
+        'cp932',
+        'shift_jis',
+        'euc_jp',
+    ]
+    tried = set()
+    for charset in candidates:
+        charset = (charset or '').lower()
+        if not charset or charset in tried:
+            continue
+        tried.add(charset)
+        try:
+            return body.decode(charset)
+        except (LookupError, UnicodeDecodeError):
+            pass
+    return body.decode('utf-8', errors='replace')
+
 def _bounded_str(value, field_name, max_len, *, allow_empty=True):
     if value is None:
         value = ''
@@ -519,7 +556,8 @@ def fetch_url(url, timeout=10, follow_redirects=True, max_bytes=MAX_FETCH_BYTES)
     opener = urlopen if follow_redirects else _no_redirect_opener.open
     with opener(req, timeout=timeout) as r:
         _validate_response_peer(r)
-        return _read_limited(r, max_bytes).decode('utf-8', errors='replace')
+        body = _read_limited(r, max_bytes)
+        return _decode_response_body(body, r.headers.get('Content-Type', ''))
 
 def parse_rss(xml_text):
     try:
@@ -1093,7 +1131,7 @@ def api_proxy():
         return _sandboxed_proxy_response(err_html.encode('utf-8'), 'text/html; charset=utf-8')
 
     if 'html' in ct.lower():
-        text = body.decode('utf-8', errors='replace')
+        text = _decode_response_body(body, ct)
         # <base> タグで相対URLを元サイト基準に解決
         base_tag = f'<base href="{url}" target="_blank">'
         text = re.sub(r'(<head[^>]*>)', r'\1' + base_tag, text, count=1, flags=re.I)
