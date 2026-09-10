@@ -155,6 +155,12 @@ app.config.update(
 
 @app.after_request
 def add_security_headers(resp):
+    # プロキシプレビューのレスポンスには埋め込み制限ヘッダを付けない。
+    # CSP sandbox が効くと iframe の中身は opaque origin になり、
+    # X-Frame-Options: SAMEORIGIN の同一 origin 判定が必ず失敗して
+    # Chrome が "This content is blocked" で描画を止めてしまうため。
+    if resp.headers.get('Content-Security-Policy', '').startswith('sandbox'):
+        return resp
     resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
     resp.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     resp.headers.setdefault('Referrer-Policy', 'same-origin')
