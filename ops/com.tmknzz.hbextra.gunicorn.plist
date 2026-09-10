@@ -8,7 +8,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/jonji/GitHub/tmknzz/HBExtra/.venv/bin/gunicorn</string>
+    <string>/Users/jonji/Project/tmknzz/HBExtra/.venv/bin/gunicorn</string>
     <string>--workers</string>
     <string>1</string>
     <string>--bind</string>
@@ -17,7 +17,13 @@
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/jonji/GitHub/tmknzz/HBExtra</string>
+  <string>/Users/jonji/Project/tmknzz/HBExtra</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HBEXTRA_DATA_DIR</key>
+    <string>/Users/jonji/Library/Application Support/HBExtra</string>
+  </dict>
 
   <key>RunAtLoad</key>
   <true/>
@@ -26,9 +32,9 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/jonji/GitHub/tmknzz/HBExtra/logs/gunicorn.log</string>
+  <string>/Users/jonji/Library/Logs/HBExtra/gunicorn.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/jonji/GitHub/tmknzz/HBExtra/logs/gunicorn.err.log</string>
+  <string>/Users/jonji/Library/Logs/HBExtra/gunicorn.err.log</string>
 </dict>
 </plist>
